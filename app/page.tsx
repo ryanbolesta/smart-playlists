@@ -1,7 +1,6 @@
 "use client";
 
 import {
-  ArrowUpRight,
   Check,
   Clock3,
   Compass,
@@ -67,7 +66,6 @@ export default function Home() {
     "recently-added",
   );
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [isPreviewing, setIsPreviewing] = useState(false);
   const [enabled, setEnabled] = useState<string[]>(["recently-added"]);
 
   const activePlaylist = playlists.find((playlist) => playlist.id === activeId)!;
@@ -96,7 +94,7 @@ export default function Home() {
 
         <div className="hidden items-center gap-2 rounded-full border border-white/10 bg-white/[0.035] px-4 py-2 text-xs text-white/55 sm:flex">
           <span className="h-1.5 w-1.5 rounded-full bg-[#d8ff79]" />
-          {isPreviewing ? "Preview workspace" : "Spotify-first, by design"}
+          Spotify-first, by design
         </div>
 
         <button
@@ -235,17 +233,14 @@ export default function Home() {
             <h2 id="connect-title" className="mt-3 text-3xl font-semibold tracking-[-0.055em]">Your Spotify account stays yours.</h2>
             <p className="mt-4 text-sm leading-6 text-white/58">The real connection will ask only to read your saved songs and recent plays, then create the private playlists you select. No playback control. No opaque recommendations.</p>
             <div className="mt-6 rounded-2xl border border-white/[0.09] bg-black/15 p-4 text-sm text-white/65">
-              <div className="flex items-center gap-3"><Play size={16} className="text-[#d8ff79]" fill="currentColor" /> Spotify OAuth setup is the next implementation step.</div>
+              <div className="flex items-center gap-3"><Play size={16} className="text-[#d8ff79]" fill="currentColor" /> We only request access to your saved songs, recent plays, and private Smart Playlists.</div>
             </div>
-            <button
+            <a
               className="mt-6 flex w-full items-center justify-center gap-2 rounded-full bg-[#d8ff79] px-4 py-3.5 text-sm font-semibold text-[#101410] transition hover:bg-[#e6ffab]"
-              onClick={() => {
-                setIsPreviewing(true);
-                setIsModalOpen(false);
-              }}
+              href="/api/spotify/connect"
             >
-              Preview the workspace <ArrowUpRight size={17} />
-            </button>
+              Continue to Spotify <Play size={17} fill="currentColor" />
+            </a>
           </div>
         </div>
       )}
