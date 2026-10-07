@@ -29,6 +29,9 @@ export async function GET(request: Request) {
     response.headers.append("Set-Cookie", spotifyStateCookie(state, request));
     return response;
   } catch (error) {
+    console.error("Spotify authorization initialization failed", {
+      message: error instanceof Error ? error.message : String(error),
+    });
     const message =
       error instanceof SpotifyConfigurationError
         ? error.message
