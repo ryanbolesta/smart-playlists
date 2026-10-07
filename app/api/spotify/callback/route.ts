@@ -19,6 +19,12 @@ type SpotifyTokenResponse = {
   error?: string;
 };
 
+type SpotifyProfile = {
+  id?: string;
+  display_name?: string | null;
+  images?: Array<{ url?: string }>;
+};
+
 export async function GET(request: Request) {
   const requestUrl = new URL(request.url);
   const closeStateCookie = spotifyStateCookie("", request, 0);
@@ -56,6 +62,14 @@ export async function GET(request: Request) {
       return redirectHome(request, "failed", closeStateCookie);
     }
 
+    const profileResponse = await fetch("https://api.spotify.com/v1/me", {
+      headers: { Authorization: `Bearer ${token.access_token}` },
+    });
+    const profile = profileResponse.ok
+      ? ((await profileResponse.json()) as SpotifyProfile)
+      : null;
+    const profileImageUrl = profile?.images?.find((image) => image.url)?.url ?? null;
+
     const now = new Date().toISOString();
     await getDb()
       .insert(spotifyConnections)
@@ -65,6 +79,9 @@ export async function GET(request: Request) {
         refreshTokenCiphertext: await encryptSpotifyToken(token.refresh_token),
         tokenExpiresAt: new Date(Date.now() + token.expires_in * 1000).toISOString(),
         scopes: token.scope ?? "",
+        spotifyUserId: profile?.id ?? null,
+        spotifyDisplayName: profile?.display_name ?? null,
+        spotifyProfileImageUrl: profileImageUrl,
         createdAt: now,
         updatedAt: now,
       })
@@ -75,6 +92,9 @@ export async function GET(request: Request) {
           refreshTokenCiphertext: await encryptSpotifyToken(token.refresh_token),
           tokenExpiresAt: new Date(Date.now() + token.expires_in * 1000).toISOString(),
           scopes: token.scope ?? "",
+          spotifyUserId: profile?.id ?? null,
+          spotifyDisplayName: profile?.display_name ?? null,
+          spotifyProfileImageUrl: profileImageUrl,
           updatedAt: now,
         },
       });

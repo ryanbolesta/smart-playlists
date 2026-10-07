@@ -57,6 +57,21 @@ export async function encryptSpotifyToken(value: string) {
   return `${toBase64Url(iv)}.${toBase64Url(new Uint8Array(encrypted))}`;
 }
 
+export async function decryptSpotifyToken(value: string) {
+  const [encodedIv, encodedCiphertext] = value.split(".");
+  if (!encodedIv || !encodedCiphertext) {
+    throw new Error("Stored Spotify token is invalid.");
+  }
+
+  const decrypted = await crypto.subtle.decrypt(
+    { name: "AES-GCM", iv: fromBase64Url(encodedIv) },
+    await getEncryptionKey(),
+    fromBase64Url(encodedCiphertext),
+  );
+
+  return new TextDecoder().decode(decrypted);
+}
+
 function getRuntimeValue(name: string): RuntimeValue {
   const value = (env as unknown as Record<string, unknown>)[name];
   return typeof value === "string" && value.trim() ? value : undefined;

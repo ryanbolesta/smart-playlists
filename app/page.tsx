@@ -70,14 +70,24 @@ export default function Home() {
   const [spotifyConnection, setSpotifyConnection] = useState<
     "checking" | "connected" | "disconnected"
   >("checking");
+  const [spotifyProfile, setSpotifyProfile] = useState<{
+    displayName: string | null;
+    imageUrl: string | null;
+  }>({ displayName: null, imageUrl: null });
 
   useEffect(() => {
     let active = true;
 
     fetch("/api/spotify/status")
       .then((response) => response.json())
-      .then((data: { connected?: boolean }) => {
-        if (active) setSpotifyConnection(data.connected ? "connected" : "disconnected");
+      .then((data: { connected?: boolean; displayName?: string | null; imageUrl?: string | null }) => {
+        if (active) {
+          setSpotifyConnection(data.connected ? "connected" : "disconnected");
+          setSpotifyProfile({
+            displayName: data.displayName ?? null,
+            imageUrl: data.imageUrl ?? null,
+          });
+        }
       })
       .catch(() => {
         if (active) setSpotifyConnection("disconnected");
@@ -118,8 +128,22 @@ export default function Home() {
         </div>
 
         {spotifyConnection === "connected" ? (
-          <div className="flex items-center gap-2 rounded-full border border-[#d8ff79]/25 bg-[#d8ff79]/10 px-4 py-2.5 text-sm font-semibold text-[#d8ff79]" role="status">
-            <Check size={16} strokeWidth={2.5} /> Spotify connected
+          <div className="flex items-center gap-2 rounded-full border border-[#d8ff79]/25 bg-[#d8ff79]/10 py-1.5 pl-2 pr-4 text-sm font-semibold text-[#d8ff79]" role="status">
+            {spotifyProfile.imageUrl ? (
+              <img
+                className="h-8 w-8 rounded-full object-cover"
+                src={spotifyProfile.imageUrl}
+                alt=""
+              />
+            ) : (
+              <span className="grid h-8 w-8 place-items-center rounded-full bg-[#d8ff79] text-[#101410]">
+                <Disc3 size={16} strokeWidth={2.5} />
+              </span>
+            )}
+            <span className="max-w-32 truncate text-white">
+              {spotifyProfile.displayName ?? "Spotify"}
+            </span>
+            <Check size={15} strokeWidth={2.75} aria-label="Connected" />
           </div>
         ) : (
           <button
