@@ -12,7 +12,7 @@ import {
   Sparkles,
   X,
 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 const playlists = [
   {
@@ -67,6 +67,26 @@ export default function Home() {
   );
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [enabled, setEnabled] = useState<string[]>(["recently-added"]);
+  const [spotifyConnection, setSpotifyConnection] = useState<
+    "checking" | "connected" | "disconnected"
+  >("checking");
+
+  useEffect(() => {
+    let active = true;
+
+    fetch("/api/spotify/status")
+      .then((response) => response.json())
+      .then((data: { connected?: boolean }) => {
+        if (active) setSpotifyConnection(data.connected ? "connected" : "disconnected");
+      })
+      .catch(() => {
+        if (active) setSpotifyConnection("disconnected");
+      });
+
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const activePlaylist = playlists.find((playlist) => playlist.id === activeId)!;
   const ActiveIcon = activePlaylist.icon;
@@ -97,12 +117,19 @@ export default function Home() {
           Spotify-first, by design
         </div>
 
-        <button
-          className="rounded-full bg-[#d8ff79] px-4 py-2.5 text-sm font-semibold text-[#101410] transition hover:bg-[#e6ffab] focus:outline-none focus:ring-2 focus:ring-[#d8ff79] focus:ring-offset-2 focus:ring-offset-[#0b0d0d]"
-          onClick={() => setIsModalOpen(true)}
-        >
-          Connect Spotify
-        </button>
+        {spotifyConnection === "connected" ? (
+          <div className="flex items-center gap-2 rounded-full border border-[#d8ff79]/25 bg-[#d8ff79]/10 px-4 py-2.5 text-sm font-semibold text-[#d8ff79]" role="status">
+            <Check size={16} strokeWidth={2.5} /> Spotify connected
+          </div>
+        ) : (
+          <button
+            className="rounded-full bg-[#d8ff79] px-4 py-2.5 text-sm font-semibold text-[#101410] transition hover:bg-[#e6ffab] focus:outline-none focus:ring-2 focus:ring-[#d8ff79] focus:ring-offset-2 focus:ring-offset-[#0b0d0d] disabled:cursor-wait disabled:opacity-70"
+            onClick={() => setIsModalOpen(true)}
+            disabled={spotifyConnection === "checking"}
+          >
+            {spotifyConnection === "checking" ? "Checking Spotify…" : "Connect Spotify"}
+          </button>
+        )}
       </header>
 
       <section id="top" className="relative z-10 mx-auto max-w-7xl px-6 pb-12 pt-12 lg:px-10 lg:pb-16 lg:pt-20">
