@@ -91,7 +91,11 @@ export async function GET(request: Request) {
 function redirectHome(request: Request, status: string, stateCookie: string) {
   const location = new URL("/", request.url);
   location.searchParams.set("spotify", status);
-  const response = Response.redirect(location, 302);
-  response.headers.append("Set-Cookie", stateCookie);
-  return response;
+  return new Response(null, {
+    status: 302,
+    headers: {
+      Location: location.toString(),
+      "Set-Cookie": stateCookie,
+    },
+  });
 }
