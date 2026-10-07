@@ -25,9 +25,13 @@ export async function GET(request: Request) {
       scope: SPOTIFY_SCOPES.join(" "),
     }).toString();
 
-    const response = Response.redirect(authorizationUrl, 302);
-    response.headers.append("Set-Cookie", spotifyStateCookie(state, request));
-    return response;
+    return new Response(null, {
+      status: 302,
+      headers: {
+        Location: authorizationUrl.toString(),
+        "Set-Cookie": spotifyStateCookie(state, request),
+      },
+    });
   } catch (error) {
     console.error("Spotify authorization initialization failed", {
       message: error instanceof Error ? error.message : String(error),
