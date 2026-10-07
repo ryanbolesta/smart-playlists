@@ -10,6 +10,9 @@ export const spotifyConnections = sqliteTable("spotify_connections", {
   refreshTokenCiphertext: text("refresh_token_ciphertext").notNull(),
   tokenExpiresAt: text("token_expires_at").notNull(),
   scopes: text("scopes").notNull(),
+  spotifyUserId: text("spotify_user_id"),
+  spotifyDisplayName: text("spotify_display_name"),
+  spotifyProfileImageUrl: text("spotify_profile_image_url"),
   createdAt: text("created_at").notNull().default("CURRENT_TIMESTAMP"),
   updatedAt: text("updated_at").notNull().default("CURRENT_TIMESTAMP"),
 });
