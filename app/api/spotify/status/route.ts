@@ -68,7 +68,6 @@ export async function GET() {
     return Response.json({
       connected: true,
       ...profile,
-      canUploadPlaylistCover: connection.scopes.split(/\s+/).includes("ugc-image-upload"),
       hasConfiguredPlaylists: Boolean(preferences),
       selectedPlaylistIds: parsePlaylistIds(preferences?.selectedPlaylistIds),
       recentlyAdded: recentlyAdded
