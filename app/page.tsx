@@ -4,7 +4,7 @@ import { Check, ChevronRight, Disc3, History, LibraryBig, LoaderCircle, Plus, Re
 import { useEffect, useState } from "react";
 
 const playlists = [
-  { id: "recently-added", title: "Recently Liked", description: "Your newest liked songs, kept in the order you found them.", icon: Plus },
+  { id: "recently-added", title: "Recently Liked", description: "Songs you liked in the last 30 days, kept in the order you found them.", icon: Plus },
   { id: "lost-and-found", title: "Lost & Found", description: "Older favorites, resurfaced when they have room to surprise you.", icon: Sparkles },
   { id: "time-capsule", title: "Time Capsule", description: "Songs you liked around this time in past years.", icon: History },
   { id: "recently-played", title: "Recently Played", description: "The tracks you have played lately, without duplicates.", icon: LibraryBig },
@@ -142,7 +142,7 @@ function RecentlyAddedSyncCard({ sync, isSyncing, error, onSync }: { sync: Recen
     : "Ready to create your private playlist";
 
   return <section className="mt-7 rounded-2xl border border-[#d8ff79]/25 bg-[#d8ff79]/[.07] p-5">
-    <div className="flex items-start justify-between gap-4"><div><p className="text-sm font-semibold text-[#d8ff79]">Recently Liked is live</p><p className="mt-1 text-sm leading-6 text-white/58">{sync?.lastSyncedAt ? `${sync.trackCount} newest liked songs · ${syncLabel}` : syncLabel}</p></div>{sync?.playlistUrl && <a className="shrink-0 text-sm font-semibold text-[#d8ff79] hover:text-[#e6ffab]" href={sync.playlistUrl} target="_blank" rel="noreferrer">Open in Spotify</a>}</div>
+    <div className="flex items-start justify-between gap-4"><div><p className="text-sm font-semibold text-[#d8ff79]">Recently Liked is live</p><p className="mt-1 text-sm leading-6 text-white/58">{sync?.lastSyncedAt ? `${sync.trackCount} liked in the last 30 days · ${syncLabel}` : syncLabel}</p></div>{sync?.playlistUrl && <a className="shrink-0 text-sm font-semibold text-[#d8ff79] hover:text-[#e6ffab]" href={sync.playlistUrl} target="_blank" rel="noreferrer">Open in Spotify</a>}</div>
     {error && <p className="mt-4 text-sm text-[#f7a092]">{error}</p>}
     <button className="mt-5 flex w-full items-center justify-center gap-2 rounded-full bg-[#d8ff79] px-5 py-3.5 text-sm font-semibold text-[#101410] transition hover:bg-[#e6ffab] disabled:cursor-wait disabled:opacity-65" onClick={onSync} disabled={isSyncing}>{isSyncing ? <LoaderCircle size={17} className="animate-spin" /> : <RefreshCw size={17} />}{isSyncing ? "Syncing Recently Liked" : sync ? "Sync Recently Liked" : "Create Recently Liked"}</button>
   </section>;

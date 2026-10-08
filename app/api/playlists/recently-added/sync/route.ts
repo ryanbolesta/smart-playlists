@@ -12,10 +12,14 @@ import recentlyLikedCover from "../../../../../assets/recently-liked-cover.jpg?i
 
 const PRESET_ID = "recently-added";
 const PLAYLIST_NAME = "Recently Liked";
-const PLAYLIST_DESCRIPTION = "Managed by Smart Playlists · your 50 newest liked songs.";
+const PLAYLIST_DESCRIPTION = "Managed by Smart Playlists · your liked songs from the last 30 days.";
+const RECENT_DAYS = 30;
+const SPOTIFY_PAGE_SIZE = 50;
+const SPOTIFY_PLAYLIST_BATCH_SIZE = 100;
 
 type SavedTracksResponse = {
-  items?: Array<{ track?: { uri?: string | null } | null }>;
+  items?: Array<{ added_at?: string; track?: { uri?: string | null } | null }>;
+  next?: string | null;
 };
 
 type CreatedPlaylist = {
@@ -44,11 +48,7 @@ export async function POST(request: Request) {
     }
 
     const accessToken = await getAccessToken(connection, request);
-    const tracksResponse = await spotifyFetch("https://api.spotify.com/v1/me/tracks?limit=50", accessToken);
-    const savedTracks = (await tracksResponse.json()) as SavedTracksResponse;
-    const uris = (savedTracks.items ?? [])
-      .map((item) => item.track?.uri)
-      .filter((uri): uri is string => typeof uri === "string" && uri.startsWith("spotify:track:"));
+    const uris = await getRecentlyLikedUris(accessToken);
 
     let playlist = await db.query.managedPlaylists.findFirst({
       where: and(eq(managedPlaylists.userId, user.userId), eq(managedPlaylists.presetId, PRESET_ID)),
@@ -86,11 +86,7 @@ export async function POST(request: Request) {
       created = true;
     }
 
-    await spotifyFetch(`https://api.spotify.com/v1/playlists/${playlist.spotifyPlaylistId}/items`, accessToken, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ uris }),
-    });
+    await replacePlaylistItems(playlist.spotifyPlaylistId, uris, accessToken);
 
     const syncedAt = new Date().toISOString();
     await db
@@ -113,6 +109,60 @@ export async function POST(request: Request) {
       { status: 502 },
     );
   }
+}
+
+async function getRecentlyLikedUris(accessToken: string) {
+  const cutoff = Date.now() - RECENT_DAYS * 24 * 60 * 60 * 1000;
+  const uris: string[] = [];
+  let offset = 0;
+
+  while (true) {
+    const response = await spotifyFetch(
+      `https://api.spotify.com/v1/me/tracks?limit=${SPOTIFY_PAGE_SIZE}&offset=${offset}`,
+      accessToken,
+    );
+    const page = (await response.json()) as SavedTracksResponse;
+    const items = page.items ?? [];
+    const hasOlderTrack = items.some((item) => {
+      const addedAt = Date.parse(item.added_at ?? "");
+      return Number.isFinite(addedAt) && addedAt < cutoff;
+    });
+
+    uris.push(
+      ...items
+        .filter((item) => Date.parse(item.added_at ?? "") >= cutoff)
+        .map((item) => item.track?.uri)
+        .filter((uri): uri is string => typeof uri === "string" && uri.startsWith("spotify:track:")),
+    );
+
+    if (hasOlderTrack || !page.next || items.length === 0) return uris;
+    offset += items.length;
+  }
+}
+
+async function replacePlaylistItems(playlistId: string, uris: string[], accessToken: string) {
+  const [firstBatch, ...remainingBatches] = chunk(uris, SPOTIFY_PLAYLIST_BATCH_SIZE);
+  await spotifyFetch(`https://api.spotify.com/v1/playlists/${playlistId}/items`, accessToken, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ uris: firstBatch ?? [] }),
+  });
+
+  for (const batch of remainingBatches) {
+    await spotifyFetch(`https://api.spotify.com/v1/playlists/${playlistId}/items`, accessToken, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ uris: batch }),
+    });
+  }
+}
+
+function chunk<T>(items: T[], size: number) {
+  const batches: T[][] = [];
+  for (let index = 0; index < items.length; index += size) {
+    batches.push(items.slice(index, index + size));
+  }
+  return batches;
 }
 
 async function uploadPlaylistCover(playlistId: string, accessToken: string) {
