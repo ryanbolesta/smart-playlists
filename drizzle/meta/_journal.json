@@ -15,6 +15,13 @@
       "when": 1791410123338,
       "tag": "0001_pink_catseye",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1791475436614,
+      "tag": "0002_mushy_the_twelve",
+      "breakpoints": true
     }
   ]
 }

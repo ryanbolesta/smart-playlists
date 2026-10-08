@@ -1,4 +1,4 @@
-import { integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
+import { sqliteTable, text } from "drizzle-orm/sqlite-core";
 
 /**
  * One Spotify authorization per Smart Playlists user. Tokens are encrypted
@@ -13,6 +13,13 @@ export const spotifyConnections = sqliteTable("spotify_connections", {
   spotifyUserId: text("spotify_user_id"),
   spotifyDisplayName: text("spotify_display_name"),
   spotifyProfileImageUrl: text("spotify_profile_image_url"),
+  createdAt: text("created_at").notNull().default("CURRENT_TIMESTAMP"),
+  updatedAt: text("updated_at").notNull().default("CURRENT_TIMESTAMP"),
+});
+
+export const playlistPreferences = sqliteTable("playlist_preferences", {
+  userId: text("user_id").primaryKey(),
+  selectedPlaylistIds: text("selected_playlist_ids").notNull().default("[]"),
   createdAt: text("created_at").notNull().default("CURRENT_TIMESTAMP"),
   updatedAt: text("updated_at").notNull().default("CURRENT_TIMESTAMP"),
 });

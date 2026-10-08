@@ -1,7 +1,7 @@
 import { eq } from "drizzle-orm";
 import { getChatGPTUser } from "../../../chatgpt-auth";
 import { getDb } from "../../../../db";
-import { spotifyConnections } from "../../../../db/schema";
+import { playlistPreferences, spotifyConnections } from "../../../../db/schema";
 import { decryptSpotifyToken } from "../../../../lib/spotify";
 
 export const dynamic = "force-dynamic";
@@ -17,6 +17,10 @@ export async function GET() {
     });
 
     if (!connection) return Response.json({ connected: false });
+
+    const preferences = await db.query.playlistPreferences.findFirst({
+      where: eq(playlistPreferences.userId, user.userId),
+    });
 
     let profile = {
       displayName: connection.spotifyDisplayName,
@@ -55,11 +59,29 @@ export async function GET() {
       }
     }
 
-    return Response.json({ connected: true, ...profile });
+    return Response.json({
+      connected: true,
+      ...profile,
+      hasConfiguredPlaylists: Boolean(preferences),
+      selectedPlaylistIds: parsePlaylistIds(preferences?.selectedPlaylistIds),
+    });
   } catch {
     return Response.json(
       { connected: false, error: "Connection status is temporarily unavailable." },
       { status: 503 },
     );
+  }
+}
+
+function parsePlaylistIds(value: string | undefined) {
+  if (!value) return [];
+
+  try {
+    const parsed = JSON.parse(value);
+    return Array.isArray(parsed)
+      ? parsed.filter((item): item is string => typeof item === "string")
+      : [];
+  } catch {
+    return [];
   }
 }
