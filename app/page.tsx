@@ -83,7 +83,7 @@ export default function Home() {
   }
 
   return (
-    <main className="min-h-screen bg-[radial-gradient(circle_at_8%_0%,rgba(192,245,142,.26),transparent_31%),radial-gradient(circle_at_95%_18%,rgba(222,255,185,.17),transparent_25%),linear-gradient(145deg,#263b29_0%,#142518_57%,#09120b_100%)] font-['Lucida_Grande','Trebuchet_MS',Arial,sans-serif] text-[#fbfff6] selection:bg-[#d9ff93] selection:text-[#193013]">
+    <main className="min-h-screen bg-[#202720] bg-[repeating-linear-gradient(100deg,rgba(255,255,255,.035)_0px,rgba(255,255,255,.035)_1px,rgba(0,0,0,.03)_2px,rgba(0,0,0,.03)_4px)] font-['Lucida_Grande','Trebuchet_MS',Arial,sans-serif] text-[#fbfff6] selection:bg-[#d9ff93] selection:text-[#193013]">
       <header className="relative mx-auto flex max-w-4xl items-center justify-between px-6 py-6 sm:py-8">
         <a className="flex items-center gap-3 text-[#fbfff6]" href="#top" aria-label="Smart Playlists home"><span className="grid h-10 w-10 place-items-center rounded-full border border-[#4f8f22] bg-[radial-gradient(circle_at_34%_24%,#f7ffe9_0_8%,transparent_9%),linear-gradient(#ddffad,#91d94a_47%,#4e8e20)] text-white shadow-[inset_0_1px_rgba(255,255,255,.85),0_2px_6px_rgba(0,0,0,.35)]"><Disc3 size={20} strokeWidth={2.25} /></span><span className="text-[15px] font-semibold tracking-[-0.03em]">Smart Playlists</span></a>
         {screen === "ready" && <ProfileBadge profile={profile} />}
