@@ -69,6 +69,8 @@ export async function POST(request: Request) {
       const createdPlaylist = (await createResponse.json()) as CreatedPlaylist;
       if (!createdPlaylist.id) throw new Error("Spotify did not return the new playlist.");
 
+      await uploadPlaylistCover(createdPlaylist.id, accessToken);
+
       const now = new Date().toISOString();
       playlist = {
         userId: user.userId,
@@ -84,27 +86,11 @@ export async function POST(request: Request) {
       created = true;
     }
 
-    await spotifyFetch(`https://api.spotify.com/v1/playlists/${playlist.spotifyPlaylistId}`, accessToken, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        name: PLAYLIST_NAME,
-        description: PLAYLIST_DESCRIPTION,
-        public: false,
-        collaborative: false,
-      }),
-    });
-
     await spotifyFetch(`https://api.spotify.com/v1/playlists/${playlist.spotifyPlaylistId}/items`, accessToken, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ uris }),
     });
-
-    const canUploadPlaylistCover = hasPlaylistCoverPermission(connection.scopes);
-    if (canUploadPlaylistCover) {
-      await uploadPlaylistCover(playlist.spotifyPlaylistId, accessToken);
-    }
 
     const syncedAt = new Date().toISOString();
     await db
@@ -117,7 +103,6 @@ export async function POST(request: Request) {
       trackCount: uris.length,
       syncedAt,
       playlistUrl: playlist.spotifyPlaylistUrl,
-      needsCoverPermission: !canUploadPlaylistCover,
     });
   } catch (error) {
     console.error("Recently Liked sync failed", {
@@ -139,10 +124,6 @@ async function uploadPlaylistCover(playlistId: string, accessToken: string) {
     headers: { "Content-Type": "image/jpeg" },
     body: coverData,
   });
-}
-
-function hasPlaylistCoverPermission(scopes: string) {
-  return scopes.split(/\s+/).includes("ugc-image-upload");
 }
 
 async function getAccessToken(

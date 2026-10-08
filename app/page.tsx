@@ -22,7 +22,6 @@ export default function Home() {
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [recentlyAddedSync, setRecentlyAddedSync] = useState<RecentlyAddedSync | null>(null);
-  const [canUploadPlaylistCover, setCanUploadPlaylistCover] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncError, setSyncError] = useState<string | null>(null);
 
@@ -30,13 +29,12 @@ export default function Home() {
     let active = true;
     fetch("/api/spotify/status")
       .then((response) => response.json())
-      .then((data: { connected?: boolean; displayName?: string | null; imageUrl?: string | null; canUploadPlaylistCover?: boolean; hasConfiguredPlaylists?: boolean; selectedPlaylistIds?: string[]; recentlyAdded?: RecentlyAddedSync | null }) => {
+      .then((data: { connected?: boolean; displayName?: string | null; imageUrl?: string | null; hasConfiguredPlaylists?: boolean; selectedPlaylistIds?: string[]; recentlyAdded?: RecentlyAddedSync | null }) => {
         if (!active) return;
         setProfile({ displayName: data.displayName ?? null, imageUrl: data.imageUrl ?? null });
         if (!data.connected) return setScreen("disconnected");
         setSelectedIds(data.selectedPlaylistIds?.length ? data.selectedPlaylistIds : ["recently-added"]);
         setRecentlyAddedSync(data.recentlyAdded ?? null);
-        setCanUploadPlaylistCover(Boolean(data.canUploadPlaylistCover));
         setScreen(data.hasConfiguredPlaylists ? "ready" : "setup");
       })
       .catch(() => active && setScreen("disconnected"));
@@ -72,12 +70,11 @@ export default function Home() {
     setSyncError(null);
     try {
       const response = await fetch("/api/playlists/recently-added/sync", { method: "POST" });
-      const data = (await response.json()) as { error?: string; trackCount?: number; syncedAt?: string; playlistUrl?: string | null; needsCoverPermission?: boolean };
+      const data = (await response.json()) as { error?: string; trackCount?: number; syncedAt?: string; playlistUrl?: string | null };
       if (!response.ok || !data.syncedAt || typeof data.trackCount !== "number") {
         throw new Error(data.error ?? "Could not sync Recently Liked.");
       }
       setRecentlyAddedSync({ lastSyncedAt: data.syncedAt, trackCount: data.trackCount, playlistUrl: data.playlistUrl ?? null });
-      setCanUploadPlaylistCover(!data.needsCoverPermission);
     } catch (error) {
       setSyncError(error instanceof Error ? error.message : "Could not sync Recently Liked.");
     } finally {
@@ -118,7 +115,7 @@ export default function Home() {
               <button className="mt-7 flex w-full items-center justify-center gap-2 rounded-full bg-[#d8ff79] px-5 py-4 text-sm font-semibold text-[#101410] transition hover:bg-[#e6ffab] disabled:cursor-not-allowed disabled:opacity-45" onClick={saveChoices} disabled={selectedIds.length === 0 || isSaving}>{isSaving ? <LoaderCircle size={17} className="animate-spin" /> : <Check size={17} />}{isSaving ? "Saving your selection" : "Save my playlists"}</button>
               <p className="mt-4 text-center text-sm text-white/38">You can change this whenever you want.</p>
             </> : <>
-              {selectedIds.includes("recently-added") && <RecentlyAddedSyncCard sync={recentlyAddedSync} canUploadPlaylistCover={canUploadPlaylistCover} isSyncing={isSyncing} error={syncError} onSync={syncRecentlyAdded} />}
+              {selectedIds.includes("recently-added") && <RecentlyAddedSyncCard sync={recentlyAddedSync} isSyncing={isSyncing} error={syncError} onSync={syncRecentlyAdded} />}
               <button className="mt-5 flex items-center justify-center gap-2 rounded-full border border-white/[.14] px-5 py-3.5 text-sm font-semibold text-white transition hover:bg-white/[.08]" onClick={() => setScreen("setup")}>Edit my selection</button>
             </>}
           </div>
@@ -139,14 +136,13 @@ function ProfileBadge({ profile, compact = false }: { profile: SpotifyProfile; c
   return <div className={`flex items-center gap-2 rounded-full border border-[#d8ff79]/25 bg-[#d8ff79]/10 py-1.5 text-sm font-semibold text-[#d8ff79] ${compact ? "pl-1.5 pr-2.5" : "pl-2 pr-4"}`} role="status">{profile.imageUrl ? <img className="h-8 w-8 rounded-full object-cover" src={profile.imageUrl} alt="" /> : <span className="grid h-8 w-8 place-items-center rounded-full bg-[#d8ff79] text-[#101410]"><Disc3 size={16} strokeWidth={2.5} /></span>}{!compact && <span className="max-w-32 truncate text-white">{profile.displayName ?? "Spotify"}</span>}<Check size={15} strokeWidth={2.75} aria-label="Spotify connected" /></div>;
 }
 
-function RecentlyAddedSyncCard({ sync, canUploadPlaylistCover, isSyncing, error, onSync }: { sync: RecentlyAddedSync | null; canUploadPlaylistCover: boolean; isSyncing: boolean; error: string | null; onSync: () => void }) {
+function RecentlyAddedSyncCard({ sync, isSyncing, error, onSync }: { sync: RecentlyAddedSync | null; isSyncing: boolean; error: string | null; onSync: () => void }) {
   const syncLabel = sync?.lastSyncedAt
     ? `Last synced ${new Intl.DateTimeFormat(undefined, { dateStyle: "medium", timeStyle: "short" }).format(new Date(sync.lastSyncedAt))}`
     : "Ready to create your private playlist";
 
   return <section className="mt-7 rounded-2xl border border-[#d8ff79]/25 bg-[#d8ff79]/[.07] p-5">
     <div className="flex items-start justify-between gap-4"><div><p className="text-sm font-semibold text-[#d8ff79]">Recently Liked is live</p><p className="mt-1 text-sm leading-6 text-white/58">{sync?.lastSyncedAt ? `${sync.trackCount} newest liked songs · ${syncLabel}` : syncLabel}</p></div>{sync?.playlistUrl && <a className="shrink-0 text-sm font-semibold text-[#d8ff79] hover:text-[#e6ffab]" href={sync.playlistUrl} target="_blank" rel="noreferrer">Open in Spotify</a>}</div>
-    {!canUploadPlaylistCover && <p className="mt-4 text-sm leading-6 text-white/58">Reconnect Spotify once to add the Smart Playlists cover image. <a className="font-semibold text-[#d8ff79] hover:text-[#e6ffab]" href="/api/spotify/connect">Reconnect Spotify</a></p>}
     {error && <p className="mt-4 text-sm text-[#f7a092]">{error}</p>}
     <button className="mt-5 flex w-full items-center justify-center gap-2 rounded-full bg-[#d8ff79] px-5 py-3.5 text-sm font-semibold text-[#101410] transition hover:bg-[#e6ffab] disabled:cursor-wait disabled:opacity-65" onClick={onSync} disabled={isSyncing}>{isSyncing ? <LoaderCircle size={17} className="animate-spin" /> : <RefreshCw size={17} />}{isSyncing ? "Syncing Recently Liked" : sync ? "Sync Recently Liked" : "Create Recently Liked"}</button>
   </section>;
