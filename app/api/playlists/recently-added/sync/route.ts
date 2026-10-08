@@ -8,6 +8,7 @@ import {
   getSpotifyConfig,
   refreshSpotifyAccessToken,
 } from "../../../../../lib/spotify";
+import recentlyLikedCover from "../../../../../assets/recently-liked-cover.jpg?inline";
 
 const PRESET_ID = "recently-added";
 const PLAYLIST_NAME = "Recently Liked";
@@ -100,6 +101,11 @@ export async function POST(request: Request) {
       body: JSON.stringify({ uris }),
     });
 
+    const canUploadPlaylistCover = hasPlaylistCoverPermission(connection.scopes);
+    if (canUploadPlaylistCover) {
+      await uploadPlaylistCover(playlist.spotifyPlaylistId, accessToken);
+    }
+
     const syncedAt = new Date().toISOString();
     await db
       .update(managedPlaylists)
@@ -111,6 +117,7 @@ export async function POST(request: Request) {
       trackCount: uris.length,
       syncedAt,
       playlistUrl: playlist.spotifyPlaylistUrl,
+      needsCoverPermission: !canUploadPlaylistCover,
     });
   } catch (error) {
     console.error("Recently Liked sync failed", {
@@ -121,6 +128,21 @@ export async function POST(request: Request) {
       { status: 502 },
     );
   }
+}
+
+async function uploadPlaylistCover(playlistId: string, accessToken: string) {
+  const coverData = recentlyLikedCover.split(",", 2)[1];
+  if (!coverData) throw new Error("The Recently Liked cover image is unavailable.");
+
+  await spotifyFetch(`https://api.spotify.com/v1/playlists/${playlistId}/images`, accessToken, {
+    method: "PUT",
+    headers: { "Content-Type": "image/jpeg" },
+    body: coverData,
+  });
+}
+
+function hasPlaylistCoverPermission(scopes: string) {
+  return scopes.split(/\s+/).includes("ugc-image-upload");
 }
 
 async function getAccessToken(

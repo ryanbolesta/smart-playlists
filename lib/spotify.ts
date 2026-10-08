@@ -5,6 +5,7 @@ export const SPOTIFY_SCOPES = [
   "user-read-recently-played",
   "playlist-read-private",
   "playlist-modify-private",
+  "ugc-image-upload",
 ] as const;
 
 type RuntimeValue = string | undefined;
