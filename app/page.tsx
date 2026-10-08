@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, ChevronRight, Disc3, History, LibraryBig, LoaderCircle, Plus, Sparkles, X } from "lucide-react";
+import { Check, ChevronRight, Disc3, History, LibraryBig, LoaderCircle, Plus, RefreshCw, Sparkles, X } from "lucide-react";
 import { useEffect, useState } from "react";
 
 const playlists = [
@@ -12,6 +12,7 @@ const playlists = [
 
 type Screen = "checking" | "disconnected" | "setup" | "ready";
 type SpotifyProfile = { displayName: string | null; imageUrl: string | null };
+type RecentlyAddedSync = { lastSyncedAt: string | null; trackCount: number; playlistUrl: string | null };
 
 export default function Home() {
   const [screen, setScreen] = useState<Screen>("checking");
@@ -20,16 +21,20 @@ export default function Home() {
   const [isConnectOpen, setIsConnectOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [recentlyAddedSync, setRecentlyAddedSync] = useState<RecentlyAddedSync | null>(null);
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [syncError, setSyncError] = useState<string | null>(null);
 
   useEffect(() => {
     let active = true;
     fetch("/api/spotify/status")
       .then((response) => response.json())
-      .then((data: { connected?: boolean; displayName?: string | null; imageUrl?: string | null; hasConfiguredPlaylists?: boolean; selectedPlaylistIds?: string[] }) => {
+      .then((data: { connected?: boolean; displayName?: string | null; imageUrl?: string | null; hasConfiguredPlaylists?: boolean; selectedPlaylistIds?: string[]; recentlyAdded?: RecentlyAddedSync | null }) => {
         if (!active) return;
         setProfile({ displayName: data.displayName ?? null, imageUrl: data.imageUrl ?? null });
         if (!data.connected) return setScreen("disconnected");
         setSelectedIds(data.selectedPlaylistIds?.length ? data.selectedPlaylistIds : ["recently-added"]);
+        setRecentlyAddedSync(data.recentlyAdded ?? null);
         setScreen(data.hasConfiguredPlaylists ? "ready" : "setup");
       })
       .catch(() => active && setScreen("disconnected"));
@@ -60,6 +65,23 @@ export default function Home() {
     }
   }
 
+  async function syncRecentlyAdded() {
+    setIsSyncing(true);
+    setSyncError(null);
+    try {
+      const response = await fetch("/api/playlists/recently-added/sync", { method: "POST" });
+      const data = (await response.json()) as { error?: string; trackCount?: number; syncedAt?: string; playlistUrl?: string | null };
+      if (!response.ok || !data.syncedAt || typeof data.trackCount !== "number") {
+        throw new Error(data.error ?? "Could not sync Recently Added.");
+      }
+      setRecentlyAddedSync({ lastSyncedAt: data.syncedAt, trackCount: data.trackCount, playlistUrl: data.playlistUrl ?? null });
+    } catch (error) {
+      setSyncError(error instanceof Error ? error.message : "Could not sync Recently Added.");
+    } finally {
+      setIsSyncing(false);
+    }
+  }
+
   return (
     <main className="min-h-screen bg-[#0b0d0d] text-[#f5f7ee] selection:bg-[#d8ff79] selection:text-[#101410]">
       <div className="pointer-events-none fixed inset-0 opacity-70 [background:radial-gradient(circle_at_20%_0%,rgba(152,220,95,.11),transparent_32%),radial-gradient(circle_at_90%_18%,rgba(91,149,235,.09),transparent_30%)]" />
@@ -84,7 +106,7 @@ export default function Home() {
           <div className="mx-auto w-full max-w-2xl">
             <div className="flex items-center justify-between gap-4"><span className="rounded-full border border-[#d8ff79]/25 bg-[#d8ff79]/10 px-3 py-1.5 text-xs font-semibold text-[#d8ff79]">{screen === "setup" ? "Step 2 of 2" : "Your playlist selection"}</span><ProfileBadge profile={profile} compact /></div>
             <h1 className="mt-7 text-balance text-4xl font-semibold tracking-[-.055em] text-white sm:text-5xl">{screen === "setup" ? "Which playlists should stay current?" : "Your playlists"}</h1>
-            <p className="mt-4 max-w-xl text-lg leading-8 text-white/58">{screen === "setup" ? "Start small. You can add or remove these any time." : "These are ready for us to bring to life next."}</p>
+            <p className="mt-4 max-w-xl text-lg leading-8 text-white/58">{screen === "setup" ? "Start small. You can add or remove these any time." : "Recently Added is ready to sync now. The rest are saved for later."}</p>
             <div className="mt-9 space-y-3">
               {(screen === "setup" ? playlists : selectedPlaylists).map((playlist) => <PlaylistOption key={playlist.id} playlist={playlist} selected={selectedIds.includes(playlist.id)} selectable={screen === "setup"} onClick={() => togglePlaylist(playlist.id)} />)}
             </div>
@@ -92,7 +114,10 @@ export default function Home() {
               {saveError && <p className="mt-4 text-sm text-[#f7a092]">{saveError}</p>}
               <button className="mt-7 flex w-full items-center justify-center gap-2 rounded-full bg-[#d8ff79] px-5 py-4 text-sm font-semibold text-[#101410] transition hover:bg-[#e6ffab] disabled:cursor-not-allowed disabled:opacity-45" onClick={saveChoices} disabled={selectedIds.length === 0 || isSaving}>{isSaving ? <LoaderCircle size={17} className="animate-spin" /> : <Check size={17} />}{isSaving ? "Saving your selection" : "Save my playlists"}</button>
               <p className="mt-4 text-center text-sm text-white/38">You can change this whenever you want.</p>
-            </> : <button className="mt-7 flex items-center justify-center gap-2 rounded-full border border-white/[.14] px-5 py-3.5 text-sm font-semibold text-white transition hover:bg-white/[.08]" onClick={() => setScreen("setup")}>Edit my selection</button>}
+            </> : <>
+              {selectedIds.includes("recently-added") && <RecentlyAddedSyncCard sync={recentlyAddedSync} isSyncing={isSyncing} error={syncError} onSync={syncRecentlyAdded} />}
+              <button className="mt-5 flex items-center justify-center gap-2 rounded-full border border-white/[.14] px-5 py-3.5 text-sm font-semibold text-white transition hover:bg-white/[.08]" onClick={() => setScreen("setup")}>Edit my selection</button>
+            </>}
           </div>
         )}
       </section>
@@ -109,4 +134,16 @@ function PlaylistOption({ playlist, selected, selectable, onClick }: { playlist:
 
 function ProfileBadge({ profile, compact = false }: { profile: SpotifyProfile; compact?: boolean }) {
   return <div className={`flex items-center gap-2 rounded-full border border-[#d8ff79]/25 bg-[#d8ff79]/10 py-1.5 text-sm font-semibold text-[#d8ff79] ${compact ? "pl-1.5 pr-2.5" : "pl-2 pr-4"}`} role="status">{profile.imageUrl ? <img className="h-8 w-8 rounded-full object-cover" src={profile.imageUrl} alt="" /> : <span className="grid h-8 w-8 place-items-center rounded-full bg-[#d8ff79] text-[#101410]"><Disc3 size={16} strokeWidth={2.5} /></span>}{!compact && <span className="max-w-32 truncate text-white">{profile.displayName ?? "Spotify"}</span>}<Check size={15} strokeWidth={2.75} aria-label="Spotify connected" /></div>;
+}
+
+function RecentlyAddedSyncCard({ sync, isSyncing, error, onSync }: { sync: RecentlyAddedSync | null; isSyncing: boolean; error: string | null; onSync: () => void }) {
+  const syncLabel = sync?.lastSyncedAt
+    ? `Last synced ${new Intl.DateTimeFormat(undefined, { dateStyle: "medium", timeStyle: "short" }).format(new Date(sync.lastSyncedAt))}`
+    : "Ready to create your private playlist";
+
+  return <section className="mt-7 rounded-2xl border border-[#d8ff79]/25 bg-[#d8ff79]/[.07] p-5">
+    <div className="flex items-start justify-between gap-4"><div><p className="text-sm font-semibold text-[#d8ff79]">Recently Added is live</p><p className="mt-1 text-sm leading-6 text-white/58">{sync?.lastSyncedAt ? `${sync.trackCount} newest liked songs · ${syncLabel}` : syncLabel}</p></div>{sync?.playlistUrl && <a className="shrink-0 text-sm font-semibold text-[#d8ff79] hover:text-[#e6ffab]" href={sync.playlistUrl} target="_blank" rel="noreferrer">Open in Spotify</a>}</div>
+    {error && <p className="mt-4 text-sm text-[#f7a092]">{error}</p>}
+    <button className="mt-5 flex w-full items-center justify-center gap-2 rounded-full bg-[#d8ff79] px-5 py-3.5 text-sm font-semibold text-[#101410] transition hover:bg-[#e6ffab] disabled:cursor-wait disabled:opacity-65" onClick={onSync} disabled={isSyncing}>{isSyncing ? <LoaderCircle size={17} className="animate-spin" /> : <RefreshCw size={17} />}{isSyncing ? "Syncing Recently Added" : sync ? "Sync Recently Added" : "Create Recently Added"}</button>
+  </section>;
 }

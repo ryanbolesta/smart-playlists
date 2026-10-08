@@ -72,6 +72,31 @@ export async function decryptSpotifyToken(value: string) {
   return new TextDecoder().decode(decrypted);
 }
 
+export async function refreshSpotifyAccessToken(
+  refreshToken: string,
+  config: ReturnType<typeof getSpotifyConfig>,
+) {
+  const response = await fetch("https://accounts.spotify.com/api/token", {
+    method: "POST",
+    headers: {
+      Authorization: `Basic ${btoa(`${config.clientId}:${config.clientSecret}`)}`,
+      "Content-Type": "application/x-www-form-urlencoded",
+    },
+    body: new URLSearchParams({ grant_type: "refresh_token", refresh_token: refreshToken }),
+  });
+  const token = (await response.json()) as {
+    access_token?: string;
+    refresh_token?: string;
+    expires_in?: number;
+  };
+
+  if (!response.ok || !token.access_token || !token.expires_in) {
+    throw new Error("Spotify could not refresh its connection. Reconnect Spotify and try again.");
+  }
+
+  return token;
+}
+
 function getRuntimeValue(name: string): RuntimeValue {
   const value = (env as unknown as Record<string, unknown>)[name];
   return typeof value === "string" && value.trim() ? value : undefined;
