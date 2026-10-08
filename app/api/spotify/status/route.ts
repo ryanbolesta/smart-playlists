@@ -1,7 +1,7 @@
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { getChatGPTUser } from "../../../chatgpt-auth";
 import { getDb } from "../../../../db";
-import { playlistPreferences, spotifyConnections } from "../../../../db/schema";
+import { managedPlaylists, playlistPreferences, spotifyConnections } from "../../../../db/schema";
 import { decryptSpotifyToken } from "../../../../lib/spotify";
 
 export const dynamic = "force-dynamic";
@@ -20,6 +20,12 @@ export async function GET() {
 
     const preferences = await db.query.playlistPreferences.findFirst({
       where: eq(playlistPreferences.userId, user.userId),
+    });
+    const recentlyAdded = await db.query.managedPlaylists.findFirst({
+      where: and(
+        eq(managedPlaylists.userId, user.userId),
+        eq(managedPlaylists.presetId, "recently-added"),
+      ),
     });
 
     let profile = {
@@ -64,6 +70,13 @@ export async function GET() {
       ...profile,
       hasConfiguredPlaylists: Boolean(preferences),
       selectedPlaylistIds: parsePlaylistIds(preferences?.selectedPlaylistIds),
+      recentlyAdded: recentlyAdded
+        ? {
+            lastSyncedAt: recentlyAdded.lastSyncedAt,
+            trackCount: recentlyAdded.trackCount,
+            playlistUrl: recentlyAdded.spotifyPlaylistUrl,
+          }
+        : null,
     });
   } catch {
     return Response.json(
