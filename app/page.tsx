@@ -4,7 +4,7 @@ import { Check, ChevronRight, Disc3, History, LibraryBig, LoaderCircle, Plus, Re
 import { useEffect, useState } from "react";
 
 const playlists = [
-  { id: "recently-added", title: "Recently Added", description: "Your newest liked songs, kept in the order you found them.", icon: Plus },
+  { id: "recently-added", title: "Recently Liked", description: "Your newest liked songs, kept in the order you found them.", icon: Plus },
   { id: "lost-and-found", title: "Lost & Found", description: "Older favorites, resurfaced when they have room to surprise you.", icon: Sparkles },
   { id: "time-capsule", title: "Time Capsule", description: "Songs you liked around this time in past years.", icon: History },
   { id: "recently-played", title: "Recently Played", description: "The tracks you have played lately, without duplicates.", icon: LibraryBig },
@@ -72,11 +72,11 @@ export default function Home() {
       const response = await fetch("/api/playlists/recently-added/sync", { method: "POST" });
       const data = (await response.json()) as { error?: string; trackCount?: number; syncedAt?: string; playlistUrl?: string | null };
       if (!response.ok || !data.syncedAt || typeof data.trackCount !== "number") {
-        throw new Error(data.error ?? "Could not sync Recently Added.");
+        throw new Error(data.error ?? "Could not sync Recently Liked.");
       }
       setRecentlyAddedSync({ lastSyncedAt: data.syncedAt, trackCount: data.trackCount, playlistUrl: data.playlistUrl ?? null });
     } catch (error) {
-      setSyncError(error instanceof Error ? error.message : "Could not sync Recently Added.");
+      setSyncError(error instanceof Error ? error.message : "Could not sync Recently Liked.");
     } finally {
       setIsSyncing(false);
     }
@@ -106,7 +106,7 @@ export default function Home() {
           <div className="mx-auto w-full max-w-2xl">
             <div className="flex items-center justify-between gap-4"><span className="rounded-full border border-[#d8ff79]/25 bg-[#d8ff79]/10 px-3 py-1.5 text-xs font-semibold text-[#d8ff79]">{screen === "setup" ? "Step 2 of 2" : "Your playlist selection"}</span><ProfileBadge profile={profile} compact /></div>
             <h1 className="mt-7 text-balance text-4xl font-semibold tracking-[-.055em] text-white sm:text-5xl">{screen === "setup" ? "Which playlists should stay current?" : "Your playlists"}</h1>
-            <p className="mt-4 max-w-xl text-lg leading-8 text-white/58">{screen === "setup" ? "Start small. You can add or remove these any time." : "Recently Added is ready to sync now. The rest are saved for later."}</p>
+            <p className="mt-4 max-w-xl text-lg leading-8 text-white/58">{screen === "setup" ? "Start small. You can add or remove these any time." : "Recently Liked is ready to sync now. The rest are saved for later."}</p>
             <div className="mt-9 space-y-3">
               {(screen === "setup" ? playlists : selectedPlaylists).map((playlist) => <PlaylistOption key={playlist.id} playlist={playlist} selected={selectedIds.includes(playlist.id)} selectable={screen === "setup"} onClick={() => togglePlaylist(playlist.id)} />)}
             </div>
@@ -142,8 +142,8 @@ function RecentlyAddedSyncCard({ sync, isSyncing, error, onSync }: { sync: Recen
     : "Ready to create your private playlist";
 
   return <section className="mt-7 rounded-2xl border border-[#d8ff79]/25 bg-[#d8ff79]/[.07] p-5">
-    <div className="flex items-start justify-between gap-4"><div><p className="text-sm font-semibold text-[#d8ff79]">Recently Added is live</p><p className="mt-1 text-sm leading-6 text-white/58">{sync?.lastSyncedAt ? `${sync.trackCount} newest liked songs · ${syncLabel}` : syncLabel}</p></div>{sync?.playlistUrl && <a className="shrink-0 text-sm font-semibold text-[#d8ff79] hover:text-[#e6ffab]" href={sync.playlistUrl} target="_blank" rel="noreferrer">Open in Spotify</a>}</div>
+    <div className="flex items-start justify-between gap-4"><div><p className="text-sm font-semibold text-[#d8ff79]">Recently Liked is live</p><p className="mt-1 text-sm leading-6 text-white/58">{sync?.lastSyncedAt ? `${sync.trackCount} newest liked songs · ${syncLabel}` : syncLabel}</p></div>{sync?.playlistUrl && <a className="shrink-0 text-sm font-semibold text-[#d8ff79] hover:text-[#e6ffab]" href={sync.playlistUrl} target="_blank" rel="noreferrer">Open in Spotify</a>}</div>
     {error && <p className="mt-4 text-sm text-[#f7a092]">{error}</p>}
-    <button className="mt-5 flex w-full items-center justify-center gap-2 rounded-full bg-[#d8ff79] px-5 py-3.5 text-sm font-semibold text-[#101410] transition hover:bg-[#e6ffab] disabled:cursor-wait disabled:opacity-65" onClick={onSync} disabled={isSyncing}>{isSyncing ? <LoaderCircle size={17} className="animate-spin" /> : <RefreshCw size={17} />}{isSyncing ? "Syncing Recently Added" : sync ? "Sync Recently Added" : "Create Recently Added"}</button>
+    <button className="mt-5 flex w-full items-center justify-center gap-2 rounded-full bg-[#d8ff79] px-5 py-3.5 text-sm font-semibold text-[#101410] transition hover:bg-[#e6ffab] disabled:cursor-wait disabled:opacity-65" onClick={onSync} disabled={isSyncing}>{isSyncing ? <LoaderCircle size={17} className="animate-spin" /> : <RefreshCw size={17} />}{isSyncing ? "Syncing Recently Liked" : sync ? "Sync Recently Liked" : "Create Recently Liked"}</button>
   </section>;
 }

@@ -10,6 +10,8 @@ import {
 } from "../../../../../lib/spotify";
 
 const PRESET_ID = "recently-added";
+const PLAYLIST_NAME = "Recently Liked";
+const PLAYLIST_DESCRIPTION = "Managed by Smart Playlists · your 50 newest liked songs.";
 
 type SavedTracksResponse = {
   items?: Array<{ track?: { uri?: string | null } | null }>;
@@ -37,7 +39,7 @@ export async function POST(request: Request) {
       return Response.json({ error: "Connect Spotify before syncing." }, { status: 409 });
     }
     if (!includesRecentlyAdded(preferences?.selectedPlaylistIds)) {
-      return Response.json({ error: "Add Recently Added to your selection before syncing." }, { status: 409 });
+      return Response.json({ error: "Add Recently Liked to your selection before syncing." }, { status: 409 });
     }
 
     const accessToken = await getAccessToken(connection, request);
@@ -57,8 +59,8 @@ export async function POST(request: Request) {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          name: "Recently Added",
-          description: "Managed by Smart Playlists · your 50 newest liked songs.",
+          name: PLAYLIST_NAME,
+          description: PLAYLIST_DESCRIPTION,
           public: false,
           collaborative: false,
         }),
@@ -81,6 +83,17 @@ export async function POST(request: Request) {
       created = true;
     }
 
+    await spotifyFetch(`https://api.spotify.com/v1/playlists/${playlist.spotifyPlaylistId}`, accessToken, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        name: PLAYLIST_NAME,
+        description: PLAYLIST_DESCRIPTION,
+        public: false,
+        collaborative: false,
+      }),
+    });
+
     await spotifyFetch(`https://api.spotify.com/v1/playlists/${playlist.spotifyPlaylistId}/items`, accessToken, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
@@ -100,11 +113,11 @@ export async function POST(request: Request) {
       playlistUrl: playlist.spotifyPlaylistUrl,
     });
   } catch (error) {
-    console.error("Recently Added sync failed", {
+    console.error("Recently Liked sync failed", {
       message: error instanceof Error ? error.message : String(error),
     });
     return Response.json(
-      { error: error instanceof Error ? error.message : "Could not sync Recently Added." },
+      { error: error instanceof Error ? error.message : "Could not sync Recently Liked." },
       { status: 502 },
     );
   }
