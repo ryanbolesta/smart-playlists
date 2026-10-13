@@ -13,8 +13,6 @@ const playlists = [
 type Screen = "checking" | "disconnected" | "setup" | "ready";
 type SpotifyProfile = { displayName: string | null; imageUrl: string | null };
 type RecentlyAddedSync = { lastSyncedAt: string | null; trackCount: number; playlistUrl: string | null };
-type LostAndFoundCandidate = { id: string; name: string; artists: string[]; album: string; imageUrl: string | null; spotifyUrl: string; addedAt: string };
-type LostAndFoundPreview = { tracks: LostAndFoundCandidate[]; eligibleCount: number; excludedRecentlyPlayedCount: number };
 
 export default function Home() {
   const [screen, setScreen] = useState<Screen>("checking");
@@ -26,9 +24,9 @@ export default function Home() {
   const [recentlyAddedSync, setRecentlyAddedSync] = useState<RecentlyAddedSync | null>(null);
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncError, setSyncError] = useState<string | null>(null);
-  const [lostAndFoundPreview, setLostAndFoundPreview] = useState<LostAndFoundPreview | null>(null);
-  const [isPreviewingLostAndFound, setIsPreviewingLostAndFound] = useState(false);
-  const [previewError, setPreviewError] = useState<string | null>(null);
+  const [lostAndFoundSync, setLostAndFoundSync] = useState<RecentlyAddedSync | null>(null);
+  const [isSyncingLostAndFound, setIsSyncingLostAndFound] = useState(false);
+  const [lostAndFoundSyncError, setLostAndFoundSyncError] = useState<string | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -36,7 +34,7 @@ export default function Home() {
     const loadStatus = async () => {
       try {
         const response = await fetch("/api/spotify/status");
-        const data = (await response.json()) as { connected?: boolean; displayName?: string | null; imageUrl?: string | null; hasConfiguredPlaylists?: boolean; selectedPlaylistIds?: string[]; recentlyAdded?: RecentlyAddedSync | null };
+        const data = (await response.json()) as { connected?: boolean; displayName?: string | null; imageUrl?: string | null; hasConfiguredPlaylists?: boolean; selectedPlaylistIds?: string[]; recentlyAdded?: RecentlyAddedSync | null; lostAndFound?: RecentlyAddedSync | null };
         if (!active) return;
         setProfile({ displayName: data.displayName ?? null, imageUrl: data.imageUrl ?? null });
         if (!data.connected) {
@@ -44,6 +42,7 @@ export default function Home() {
         } else {
           setSelectedIds(data.selectedPlaylistIds?.length ? data.selectedPlaylistIds : ["recently-added"]);
           setRecentlyAddedSync(data.recentlyAdded ?? null);
+          setLostAndFoundSync(data.lostAndFound ?? null);
           setScreen(data.hasConfiguredPlaylists ? "ready" : "setup");
         }
         hasLoaded = true;
@@ -97,18 +96,18 @@ export default function Home() {
     }
   }
 
-  async function previewLostAndFound() {
-    setIsPreviewingLostAndFound(true);
-    setPreviewError(null);
+  async function syncLostAndFound() {
+    setIsSyncingLostAndFound(true);
+    setLostAndFoundSyncError(null);
     try {
-      const response = await fetch("/api/playlists/lost-and-found/preview");
-      const data = (await response.json()) as LostAndFoundPreview & { error?: string };
-      if (!response.ok) throw new Error(data.error ?? "Could not preview Lost & Found.");
-      setLostAndFoundPreview(data);
+      const response = await fetch("/api/playlists/lost-and-found/sync", { method: "POST" });
+      const data = (await response.json()) as { error?: string; trackCount?: number; syncedAt?: string; playlistUrl?: string | null };
+      if (!response.ok || !data.syncedAt || typeof data.trackCount !== "number") throw new Error(data.error ?? "Could not sync Lost & Found.");
+      setLostAndFoundSync({ lastSyncedAt: data.syncedAt, trackCount: data.trackCount, playlistUrl: data.playlistUrl ?? null });
     } catch (error) {
-      setPreviewError(error instanceof Error ? error.message : "Could not preview Lost & Found.");
+      setLostAndFoundSyncError(error instanceof Error ? error.message : "Could not sync Lost & Found.");
     } finally {
-      setIsPreviewingLostAndFound(false);
+      setIsSyncingLostAndFound(false);
     }
   }
 
@@ -145,7 +144,7 @@ export default function Home() {
               <p className="mt-4 text-center text-sm text-[#b3cbb0]">You can change this whenever you want.</p>
             </> : <>
               {selectedIds.includes("recently-added") && <RecentlyAddedSyncCard sync={recentlyAddedSync} isSyncing={isSyncing} error={syncError} onSync={syncRecentlyAdded} />}
-              <LostAndFoundPreviewCard preview={lostAndFoundPreview} isLoading={isPreviewingLostAndFound} error={previewError} onPreview={previewLostAndFound} />
+              {selectedIds.includes("lost-and-found") && <LostAndFoundSyncCard sync={lostAndFoundSync} isSyncing={isSyncingLostAndFound} error={lostAndFoundSyncError} onSync={syncLostAndFound} />}
               <button className="mt-5 flex items-center justify-center gap-2 rounded-full border border-[#9db1bd] bg-[linear-gradient(#fbfdff,#d7e2e9)] px-5 py-3.5 text-sm font-semibold text-[#213640] shadow-[inset_0_1px_white,0_1px_2px_rgba(0,0,0,.22)] transition hover:brightness-105" onClick={() => setScreen("setup")}>Edit my selection</button>
             </>}
           </div>
@@ -179,14 +178,11 @@ function RecentlyAddedSyncCard({ sync, isSyncing, error, onSync }: { sync: Recen
   </section>;
 }
 
-function LostAndFoundPreviewCard({ preview, isLoading, error, onPreview }: { preview: LostAndFoundPreview | null; isLoading: boolean; error: string | null; onPreview: () => void }) {
+function LostAndFoundSyncCard({ sync, isSyncing, error, onSync }: { sync: RecentlyAddedSync | null; isSyncing: boolean; error: string | null; onSync: () => void }) {
+  const syncLabel = sync?.lastSyncedAt ? `Last synced ${new Intl.DateTimeFormat(undefined, { dateStyle: "medium", timeStyle: "short" }).format(new Date(sync.lastSyncedAt))}` : "Ready to create your private playlist";
   return <section className="mt-4 rounded-lg border border-[#a7b695] bg-[linear-gradient(#fdfff9,#dfe8d7)] p-5 text-[#1d3519] shadow-[inset_0_1px_white,0_3px_8px_rgba(0,0,0,.2)]">
-    <div className="flex items-start gap-3"><span className="grid h-10 w-10 shrink-0 place-items-center rounded-md border border-[#718b67] bg-[linear-gradient(135deg,#f9ffeb,#b7e87b_46%,#568f28)] text-white shadow-[inset_0_1px_rgba(255,255,255,.8)]"><Sparkles size={18} /></span><div><p className="text-sm font-semibold text-[#4e8e20]">Lost &amp; Found preview</p><p className="mt-1 text-sm leading-6 text-[#536853]">Older liked songs that Spotify still recognizes as favorites, but you have not played recently. This preview only reads your Spotify data; it will not create or change a playlist.</p></div></div>
-    <button className="mt-5 flex w-full items-center justify-center gap-2 rounded-full border border-[#4e8e20] bg-[linear-gradient(color-mix(in_srgb,#a9e96a_28%,white)_0%,#83c940_46%,color-mix(in_srgb,#83c940_70%,#315e14)_100%)] px-5 py-3.5 text-sm font-semibold text-white shadow-[inset_0_1px_white,0_2px_4px_rgba(0,0,0,.25)] transition hover:brightness-110 disabled:cursor-wait disabled:opacity-65" onClick={onPreview} disabled={isLoading}>{isLoading ? <LoaderCircle size={17} className="animate-spin" /> : <Sparkles size={17} />}{isLoading ? "Finding your favorites" : preview ? "Refresh preview" : "Preview Lost & Found"}</button>
-    {error && <p className="mt-4 text-sm text-[#b8463c]">{error}</p>}
-    {preview && <>
-      <p className="mt-4 text-xs font-semibold uppercase tracking-[.08em] text-[#536853]">{preview.tracks.length} candidates · {preview.excludedRecentlyPlayedCount} excluded because they were played recently</p>
-      {preview.tracks.length > 0 ? <div className="mt-3 max-h-96 space-y-2 overflow-auto pr-1">{preview.tracks.map((track) => <a key={track.id} className="flex items-center gap-3 rounded-md border border-[#c3d0bf] bg-white/60 p-2 transition hover:bg-white/90" href={track.spotifyUrl} target="_blank" rel="noreferrer"><span className="h-10 w-10 shrink-0 overflow-hidden rounded-sm border border-[#a7b695] bg-[#cbd5c7]">{track.imageUrl && <img src={track.imageUrl} alt="" className="h-full w-full object-cover" />}</span><span className="min-w-0"><span className="block truncate text-sm font-semibold text-[#1d3519]">{track.name}</span><span className="block truncate text-xs text-[#536853]">{track.artists.join(", ")} · {track.album}</span></span></a>)}</div> : <p className="mt-3 text-sm text-[#536853]">No matches yet. Try again after Spotify has more listening history.</p>}
-    </>}
+    <div className="flex items-start justify-between gap-4"><div><p className="text-sm font-semibold text-[#4e8e20]">Lost &amp; Found is live</p><p className="mt-1 text-sm leading-6 text-[#536853]">{sync?.lastSyncedAt ? `${sync.trackCount} older favorites · ${syncLabel} · Syncs automatically.` : syncLabel}</p></div>{sync?.playlistUrl && <a className="shrink-0 text-sm font-semibold text-[#4e8e20] hover:text-[#315e14]" href={sync.playlistUrl} target="_blank" rel="noreferrer">Open in Spotify</a>}</div>
+    {error && <p className="mt-4 text-sm text-[#f7a092]">{error}</p>}
+    <button className="mt-5 flex w-full items-center justify-center gap-2 rounded-full border border-[#4e8e20] bg-[linear-gradient(color-mix(in_srgb,#a9e96a_28%,white)_0%,#83c940_46%,color-mix(in_srgb,#83c940_70%,#315e14)_100%)] px-5 py-3.5 text-sm font-semibold text-white shadow-[inset_0_1px_white,0_2px_4px_rgba(0,0,0,.25)] transition hover:brightness-110 disabled:cursor-wait disabled:opacity-65" onClick={onSync} disabled={isSyncing}>{isSyncing ? <LoaderCircle size={17} className="animate-spin" /> : <Sparkles size={17} />}{isSyncing ? "Syncing Lost & Found" : sync ? "Sync Lost & Found" : "Create Lost & Found"}</button>
   </section>;
 }

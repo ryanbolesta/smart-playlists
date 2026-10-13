@@ -27,6 +27,7 @@ export async function GET() {
         eq(managedPlaylists.presetId, "recently-added"),
       ),
     });
+    const lostAndFound = await db.query.managedPlaylists.findFirst({ where: and(eq(managedPlaylists.userId, user.userId), eq(managedPlaylists.presetId, "lost-and-found")) });
 
     let profile = {
       displayName: connection.spotifyDisplayName,
@@ -77,6 +78,7 @@ export async function GET() {
             playlistUrl: recentlyAdded.spotifyPlaylistUrl,
           }
         : null,
+      lostAndFound: lostAndFound ? { lastSyncedAt: lostAndFound.lastSyncedAt, trackCount: lostAndFound.trackCount, playlistUrl: lostAndFound.spotifyPlaylistUrl } : null,
     });
   } catch {
     return Response.json(
