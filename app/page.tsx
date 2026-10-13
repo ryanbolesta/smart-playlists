@@ -27,18 +27,28 @@ export default function Home() {
 
   useEffect(() => {
     let active = true;
-    fetch("/api/spotify/status")
-      .then((response) => response.json())
-      .then((data: { connected?: boolean; displayName?: string | null; imageUrl?: string | null; hasConfiguredPlaylists?: boolean; selectedPlaylistIds?: string[]; recentlyAdded?: RecentlyAddedSync | null }) => {
+    let hasLoaded = false;
+    const loadStatus = async () => {
+      try {
+        const response = await fetch("/api/spotify/status");
+        const data = (await response.json()) as { connected?: boolean; displayName?: string | null; imageUrl?: string | null; hasConfiguredPlaylists?: boolean; selectedPlaylistIds?: string[]; recentlyAdded?: RecentlyAddedSync | null };
         if (!active) return;
         setProfile({ displayName: data.displayName ?? null, imageUrl: data.imageUrl ?? null });
-        if (!data.connected) return setScreen("disconnected");
-        setSelectedIds(data.selectedPlaylistIds?.length ? data.selectedPlaylistIds : ["recently-added"]);
-        setRecentlyAddedSync(data.recentlyAdded ?? null);
-        setScreen(data.hasConfiguredPlaylists ? "ready" : "setup");
-      })
-      .catch(() => active && setScreen("disconnected"));
-    return () => { active = false; };
+        if (!data.connected) {
+          setScreen("disconnected");
+        } else {
+          setSelectedIds(data.selectedPlaylistIds?.length ? data.selectedPlaylistIds : ["recently-added"]);
+          setRecentlyAddedSync(data.recentlyAdded ?? null);
+          setScreen(data.hasConfiguredPlaylists ? "ready" : "setup");
+        }
+        hasLoaded = true;
+      } catch {
+        if (active && !hasLoaded) setScreen("disconnected");
+      }
+    };
+    void loadStatus();
+    const refreshTimer = window.setInterval(() => void loadStatus(), 60_000);
+    return () => { active = false; window.clearInterval(refreshTimer); };
   }, []);
 
   const selectedPlaylists = playlists.filter((playlist) => selectedIds.includes(playlist.id));
