@@ -13,6 +13,8 @@ const playlists = [
 type Screen = "checking" | "disconnected" | "setup" | "ready";
 type SpotifyProfile = { displayName: string | null; imageUrl: string | null };
 type RecentlyAddedSync = { lastSyncedAt: string | null; trackCount: number; playlistUrl: string | null };
+type LostAndFoundCandidate = { id: string; name: string; artists: string[]; album: string; imageUrl: string | null; spotifyUrl: string; addedAt: string };
+type LostAndFoundPreview = { tracks: LostAndFoundCandidate[]; eligibleCount: number; excludedRecentlyPlayedCount: number };
 
 export default function Home() {
   const [screen, setScreen] = useState<Screen>("checking");
@@ -24,6 +26,9 @@ export default function Home() {
   const [recentlyAddedSync, setRecentlyAddedSync] = useState<RecentlyAddedSync | null>(null);
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncError, setSyncError] = useState<string | null>(null);
+  const [lostAndFoundPreview, setLostAndFoundPreview] = useState<LostAndFoundPreview | null>(null);
+  const [isPreviewingLostAndFound, setIsPreviewingLostAndFound] = useState(false);
+  const [previewError, setPreviewError] = useState<string | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -92,6 +97,21 @@ export default function Home() {
     }
   }
 
+  async function previewLostAndFound() {
+    setIsPreviewingLostAndFound(true);
+    setPreviewError(null);
+    try {
+      const response = await fetch("/api/playlists/lost-and-found/preview");
+      const data = (await response.json()) as LostAndFoundPreview & { error?: string };
+      if (!response.ok) throw new Error(data.error ?? "Could not preview Lost & Found.");
+      setLostAndFoundPreview(data);
+    } catch (error) {
+      setPreviewError(error instanceof Error ? error.message : "Could not preview Lost & Found.");
+    } finally {
+      setIsPreviewingLostAndFound(false);
+    }
+  }
+
   return (
     <main className="min-h-screen bg-[#4d565c] bg-[repeating-linear-gradient(100deg,rgba(255,255,255,.11)_0px,rgba(255,255,255,.11)_1px,rgba(0,0,0,.055)_2px,rgba(0,0,0,.055)_4px)] font-['Lucida_Grande','Trebuchet_MS',Arial,sans-serif] text-[#fbfff6] selection:bg-[#d9ff93] selection:text-[#193013]">
       <header className="relative mx-auto flex max-w-4xl items-center justify-between px-6 py-6 sm:py-8">
@@ -125,6 +145,7 @@ export default function Home() {
               <p className="mt-4 text-center text-sm text-[#b3cbb0]">You can change this whenever you want.</p>
             </> : <>
               {selectedIds.includes("recently-added") && <RecentlyAddedSyncCard sync={recentlyAddedSync} isSyncing={isSyncing} error={syncError} onSync={syncRecentlyAdded} />}
+              <LostAndFoundPreviewCard preview={lostAndFoundPreview} isLoading={isPreviewingLostAndFound} error={previewError} onPreview={previewLostAndFound} />
               <button className="mt-5 flex items-center justify-center gap-2 rounded-full border border-[#9db1bd] bg-[linear-gradient(#fbfdff,#d7e2e9)] px-5 py-3.5 text-sm font-semibold text-[#213640] shadow-[inset_0_1px_white,0_1px_2px_rgba(0,0,0,.22)] transition hover:brightness-105" onClick={() => setScreen("setup")}>Edit my selection</button>
             </>}
           </div>
@@ -155,5 +176,17 @@ function RecentlyAddedSyncCard({ sync, isSyncing, error, onSync }: { sync: Recen
     {error && <p className="mt-4 text-sm text-[#f7a092]">{error}</p>}
     <button className="mt-5 flex w-full items-center justify-center gap-2 rounded-full border border-[#4e8e20] bg-[linear-gradient(color-mix(in_srgb,#a9e96a_28%,white)_0%,#83c940_46%,color-mix(in_srgb,#83c940_70%,#315e14)_100%)] px-5 py-3.5 text-sm font-semibold text-white shadow-[inset_0_1px_white,0_2px_4px_rgba(0,0,0,.25)] transition hover:brightness-110 disabled:cursor-wait disabled:opacity-65" onClick={onSync} disabled={isSyncing}>{isSyncing ? <LoaderCircle size={17} className="animate-spin" /> : <RefreshCw size={17} />}{isSyncing ? "Syncing Recently Liked" : sync ? "Sync Recently Liked" : "Create Recently Liked"}</button>
     <a className="mt-4 block text-center text-xs font-semibold text-[#4e8e20] hover:text-[#315e14]" href="/api/spotify/connect">Reconnect Spotify to update permissions</a>
+  </section>;
+}
+
+function LostAndFoundPreviewCard({ preview, isLoading, error, onPreview }: { preview: LostAndFoundPreview | null; isLoading: boolean; error: string | null; onPreview: () => void }) {
+  return <section className="mt-4 rounded-lg border border-[#a7b695] bg-[linear-gradient(#fdfff9,#dfe8d7)] p-5 text-[#1d3519] shadow-[inset_0_1px_white,0_3px_8px_rgba(0,0,0,.2)]">
+    <div className="flex items-start gap-3"><span className="grid h-10 w-10 shrink-0 place-items-center rounded-md border border-[#718b67] bg-[linear-gradient(135deg,#f9ffeb,#b7e87b_46%,#568f28)] text-white shadow-[inset_0_1px_rgba(255,255,255,.8)]"><Sparkles size={18} /></span><div><p className="text-sm font-semibold text-[#4e8e20]">Lost &amp; Found preview</p><p className="mt-1 text-sm leading-6 text-[#536853]">Older liked songs you have played several times, but not recently. This preview only reads your Spotify data; it will not create or change a playlist.</p></div></div>
+    <button className="mt-5 flex w-full items-center justify-center gap-2 rounded-full border border-[#4e8e20] bg-[linear-gradient(color-mix(in_srgb,#a9e96a_28%,white)_0%,#83c940_46%,color-mix(in_srgb,#83c940_70%,#315e14)_100%)] px-5 py-3.5 text-sm font-semibold text-white shadow-[inset_0_1px_white,0_2px_4px_rgba(0,0,0,.25)] transition hover:brightness-110 disabled:cursor-wait disabled:opacity-65" onClick={onPreview} disabled={isLoading}>{isLoading ? <LoaderCircle size={17} className="animate-spin" /> : <Sparkles size={17} />}{isLoading ? "Finding your favorites" : preview ? "Refresh preview" : "Preview Lost & Found"}</button>
+    {error && <p className="mt-4 text-sm text-[#b8463c]">{error}</p>}
+    {preview && <>
+      <p className="mt-4 text-xs font-semibold uppercase tracking-[.08em] text-[#536853]">{preview.tracks.length} candidates · {preview.excludedRecentlyPlayedCount} excluded because they were played recently</p>
+      {preview.tracks.length > 0 ? <div className="mt-3 max-h-96 space-y-2 overflow-auto pr-1">{preview.tracks.map((track) => <a key={track.id} className="flex items-center gap-3 rounded-md border border-[#c3d0bf] bg-white/60 p-2 transition hover:bg-white/90" href={track.spotifyUrl} target="_blank" rel="noreferrer"><span className="h-10 w-10 shrink-0 overflow-hidden rounded-sm border border-[#a7b695] bg-[#cbd5c7]">{track.imageUrl && <img src={track.imageUrl} alt="" className="h-full w-full object-cover" />}</span><span className="min-w-0"><span className="block truncate text-sm font-semibold text-[#1d3519]">{track.name}</span><span className="block truncate text-xs text-[#536853]">{track.artists.join(", ")} · {track.album}</span></span></a>)}</div> : <p className="mt-3 text-sm text-[#536853]">No matches yet. Try again after Spotify has more listening history.</p>}
+    </>}
   </section>;
 }
