@@ -64,7 +64,7 @@ SPOTIFY_REDIRECT_URI=
 
 `TOKEN_ENCRYPTION_KEY` must be a base64-encoded 32-byte key. It encrypts Spotify access and refresh tokens before they are stored in D1. `.env.example` documents the keys, while `.env*` files remain ignored.
 
-The OAuth flow requests only the permissions required for this first release: read saved tracks, read recent plays, read private playlists, and manage private playlists. It does not request playback control or permission to modify Liked Songs.
+The OAuth flow requests only the permissions required for this first release: read saved tracks, recent plays, and top tracks; read private playlists; and manage private playlists. It does not request playback control or permission to modify Liked Songs.
 
 ## Project map
 
@@ -78,6 +78,12 @@ drizzle/                     Generated SQLite migrations
 ```
 
 Most files under `components/ui/`, `build/`, and `scripts/` are framework or hosting-starter support files. They are not core Smart Playlists product logic.
+
+## Migration history
+
+Keep the existing applied migration filenames unchanged. The hosted D1 deployment runner treats those filenames as part of migration history.
+
+When this project intentionally resets its D1 database, replace the old migration history with a single descriptive baseline migration (for example, `0000_initial_schema.sql`) that represents the then-current schema.
 
 ## Next milestones
 

@@ -3,6 +3,7 @@ import { env } from "cloudflare:workers";
 export const SPOTIFY_SCOPES = [
   "user-library-read",
   "user-read-recently-played",
+  "user-top-read",
   "playlist-read-private",
   "playlist-modify-private",
   "ugc-image-upload",
