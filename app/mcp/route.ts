@@ -2,7 +2,7 @@ import { syncScheduledRecentlyLiked } from "../../lib/recently-liked-sync";
 import { syncScheduledLostAndFound } from "../../lib/lost-and-found-sync";
 
 export const dynamic = "force-dynamic";
-const tools = [{ name: "sync_managed_playlists", description: "Synchronize every existing managed playlist configured in Smart Playlists.", inputSchema: { type: "object", properties: {}, additionalProperties: false } }];
+const tools = [{ name: "sync_recently_liked_playlists", description: "Synchronize every existing managed playlist configured in Smart Playlists.", inputSchema: { type: "object", properties: {}, additionalProperties: false } }];
 
 export async function POST(request: Request) {
   let rpc: { id?: string | number | null; method?: string; params?: { name?: string } };
@@ -11,7 +11,7 @@ export async function POST(request: Request) {
   if (rpc.method === "server/discover") return Response.json(jsonRpcResult(id, { supportedVersions: ["2026-07-28"], capabilities: { tools: {} } }));
   if (rpc.method === "tools/list") return Response.json(jsonRpcResult(id, { tools }));
   if (rpc.method === "tools/call") {
-    if (rpc.params?.name !== "sync_managed_playlists") return Response.json(jsonRpcError(id, -32601, "Unknown tool."), { status: 404 });
+    if (rpc.params?.name !== "sync_recently_liked_playlists" && rpc.params?.name !== "sync_managed_playlists") return Response.json(jsonRpcError(id, -32601, "Unknown tool."), { status: 404 });
     try {
       const [recentlyLiked, lostAndFound] = await Promise.all([syncScheduledRecentlyLiked(request), syncScheduledLostAndFound(request)]);
       return Response.json(jsonRpcResult(id, { content: [{ type: "text", text: `Managed playlist sync complete: Recently Liked ${recentlyLiked.synced} synced, Lost & Found ${lostAndFound.synced} synced, ${recentlyLiked.failed + lostAndFound.failed} failed.` }] }));
