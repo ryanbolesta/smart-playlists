@@ -6,35 +6,35 @@
       "idx": 0,
       "version": "6",
       "when": 1791311086159,
-      "tag": "0000_create_spotify_connections",
+      "tag": "0000_broad_skullbuster",
       "breakpoints": true
     },
     {
       "idx": 1,
       "version": "6",
       "when": 1791410123338,
-      "tag": "0001_add_spotify_profile_fields",
+      "tag": "0001_pink_catseye",
       "breakpoints": true
     },
     {
       "idx": 2,
       "version": "6",
       "when": 1791475436614,
-      "tag": "0002_create_playlist_preferences",
+      "tag": "0002_mushy_the_twelve",
       "breakpoints": true
     },
     {
       "idx": 3,
       "version": "6",
       "when": 1791476241388,
-      "tag": "0003_create_managed_playlists",
+      "tag": "0003_aberrant_micromax",
       "breakpoints": true
     },
     {
       "idx": 4,
       "version": "6",
       "when": 1791909724672,
-      "tag": "0004_add_managed_playlist_sync_state",
+      "tag": "0004_confused_harrier",
       "breakpoints": true
     }
   ]
