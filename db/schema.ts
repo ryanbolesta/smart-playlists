@@ -32,6 +32,8 @@ export const managedPlaylists = sqliteTable(
     spotifyPlaylistId: text("spotify_playlist_id").notNull(),
     spotifyPlaylistUrl: text("spotify_playlist_url"),
     lastSyncedAt: text("last_synced_at"),
+    syncLeaseExpiresAt: text("sync_lease_expires_at"),
+    lastSyncError: text("last_sync_error"),
     trackCount: integer("track_count").notNull().default(0),
     createdAt: text("created_at").notNull().default("CURRENT_TIMESTAMP"),
     updatedAt: text("updated_at").notNull().default("CURRENT_TIMESTAMP"),
