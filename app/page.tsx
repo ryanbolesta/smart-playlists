@@ -136,15 +136,13 @@ export default function Home() {
             <h1 className="mt-7 text-balance text-4xl font-semibold tracking-[-.055em] text-white sm:text-5xl">{screen === "setup" ? "Which playlists should stay current?" : "Your playlists"}</h1>
             <p className="mt-4 max-w-xl text-lg leading-8 text-[#d4e4d2]">{screen === "setup" ? "Start small. You can add or remove these any time." : "Recently Liked stays in sync automatically. The rest are saved for later."}</p>
             <div className="mt-9 space-y-3">
-              {(screen === "setup" ? playlists : selectedPlaylists).map((playlist) => <PlaylistOption key={playlist.id} playlist={playlist} selected={selectedIds.includes(playlist.id)} selectable={screen === "setup"} onClick={() => togglePlaylist(playlist.id)} />)}
+              {(screen === "setup" ? playlists : selectedPlaylists).map((playlist) => <div key={playlist.id}><PlaylistOption playlist={playlist} selected={selectedIds.includes(playlist.id)} selectable={screen === "setup"} onClick={() => togglePlaylist(playlist.id)} />{screen === "ready" && playlist.id === "recently-added" && <RecentlyAddedSyncCard sync={recentlyAddedSync} isSyncing={isSyncing} error={syncError} onSync={syncRecentlyAdded} />}{screen === "ready" && playlist.id === "lost-and-found" && <LostAndFoundSyncCard sync={lostAndFoundSync} isSyncing={isSyncingLostAndFound} error={lostAndFoundSyncError} onSync={syncLostAndFound} />}</div>)}
             </div>
             {screen === "setup" ? <>
               {saveError && <p className="mt-4 text-sm text-[#f7a092]">{saveError}</p>}
               <button className="mt-7 flex w-full items-center justify-center gap-2 rounded-full border border-[#4e8e20] bg-[linear-gradient(color-mix(in_srgb,#a9e96a_28%,white)_0%,#83c940_46%,color-mix(in_srgb,#83c940_70%,#315e14)_100%)] px-5 py-4 text-sm font-semibold text-white shadow-[inset_0_1px_rgba(255,255,255,.9),0_2px_5px_rgba(0,0,0,.35)] transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-45" onClick={saveChoices} disabled={selectedIds.length === 0 || isSaving}>{isSaving ? <LoaderCircle size={17} className="animate-spin" /> : <Check size={17} />}{isSaving ? "Saving your selection" : "Save my playlists"}</button>
               <p className="mt-4 text-center text-sm text-[#b3cbb0]">You can change this whenever you want.</p>
             </> : <>
-              {selectedIds.includes("recently-added") && <RecentlyAddedSyncCard sync={recentlyAddedSync} isSyncing={isSyncing} error={syncError} onSync={syncRecentlyAdded} />}
-              {selectedIds.includes("lost-and-found") && <LostAndFoundSyncCard sync={lostAndFoundSync} isSyncing={isSyncingLostAndFound} error={lostAndFoundSyncError} onSync={syncLostAndFound} />}
               <button className="mt-5 flex items-center justify-center gap-2 rounded-full border border-[#9db1bd] bg-[linear-gradient(#fbfdff,#d7e2e9)] px-5 py-3.5 text-sm font-semibold text-[#213640] shadow-[inset_0_1px_white,0_1px_2px_rgba(0,0,0,.22)] transition hover:brightness-105" onClick={() => setScreen("setup")}>Edit my selection</button>
             </>}
           </div>
