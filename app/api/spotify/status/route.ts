@@ -66,11 +66,13 @@ export async function GET() {
       }
     }
 
+    const selectedPlaylistIds = parsePlaylistIds(preferences?.selectedPlaylistIds);
+
     return Response.json({
       connected: true,
       ...profile,
-      hasConfiguredPlaylists: Boolean(preferences),
-      selectedPlaylistIds: parsePlaylistIds(preferences?.selectedPlaylistIds),
+      hasConfiguredPlaylists: selectedPlaylistIds.length > 0,
+      selectedPlaylistIds,
       recentlyAdded: recentlyAdded
         ? {
             lastSyncedAt: recentlyAdded.lastSyncedAt,
@@ -94,7 +96,7 @@ function parsePlaylistIds(value: string | undefined) {
   try {
     const parsed = JSON.parse(value);
     return Array.isArray(parsed)
-      ? parsed.filter((item): item is string => typeof item === "string")
+      ? parsed.filter((item): item is string => typeof item === "string" && (item === "recently-added" || item === "lost-and-found"))
       : [];
   } catch {
     return [];

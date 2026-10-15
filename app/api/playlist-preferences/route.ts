@@ -6,8 +6,6 @@ import { playlistPreferences } from "../../../db/schema";
 const PLAYLIST_IDS = new Set([
   "recently-added",
   "lost-and-found",
-  "time-capsule",
-  "recently-played",
 ]);
 
 export const dynamic = "force-dynamic";

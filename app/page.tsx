@@ -1,13 +1,11 @@
 "use client";
 
-import { Check, ChevronRight, Disc3, History, LibraryBig, LoaderCircle, Plus, RefreshCw, Sparkles, X } from "lucide-react";
+import { Check, ChevronRight, Disc3, LoaderCircle, Plus, RefreshCw, Sparkles, X } from "lucide-react";
 import { useEffect, useState } from "react";
 
 const playlists = [
   { id: "recently-added", title: "Recently Liked", description: "Songs you liked in the last 30 days, kept in the order you found them.", icon: Plus },
   { id: "lost-and-found", title: "Lost & Found", description: "Older favorites, resurfaced when they have room to surprise you.", icon: Sparkles },
-  { id: "time-capsule", title: "Time Capsule", description: "Songs you liked around this time in past years.", icon: History },
-  { id: "recently-played", title: "Recently Played", description: "The tracks you have played lately, without duplicates.", icon: LibraryBig },
 ] as const;
 
 type Screen = "checking" | "disconnected" | "setup" | "ready";

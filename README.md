@@ -2,25 +2,22 @@
 
 A Spotify-first web app for a small set of managed music playlists that stay useful without requiring people to learn a rule builder.
 
-The first four presets are:
+The current presets are:
 
-- **Recently Added** — the latest songs saved to Liked Songs.
-- **Lost & Found** — liked songs added six or more months ago.
-- **Time Capsule** — songs liked one, two, or five years ago.
-- **Recently Played** — distinct recent tracks, newest first.
+- **Recently Liked** — songs liked in the last 30 days, kept in the order you found them.
+- **Lost & Found** — older favorites, resurfaced using listening history and a diversity-aware ranking.
 
-The interface and playlist concepts are provider-neutral. The first integration is Spotify; a provider boundary will be introduced before the sync engine is built so Apple Music can follow later.
+The interface and playlist concepts are intended to stay provider-neutral. Spotify is the first integration; the sync engine currently uses Spotify-specific saved-track and listening-history data.
 
 ## Current status
 
 The private preview is live at [smart-playlists.ryanbolesta.chatgpt.site](https://smart-playlists.ryanbolesta.chatgpt.site). It currently includes:
 
-- the interactive dashboard and preset selection flow;
-- server-side Spotify OAuth routes;
-- encrypted token storage design backed by Cloudflare D1; and
-- the initial D1 migration for Spotify connections.
-
-It does **not** yet fetch music, create Spotify playlists, or schedule refreshes. Connecting Spotify remains unavailable until runtime credentials are configured.
+- the interactive dashboard and first-connection preset selection flow;
+- server-side Spotify OAuth with profile display;
+- Recently Liked and Lost & Found playlist creation and synchronization;
+- encrypted Spotify token storage and managed-playlist metadata in Cloudflare D1; and
+- hourly background synchronization with transient-failure suppression and persistent-failure alerts.
 
 ## Run locally
 
@@ -89,6 +86,6 @@ When this project intentionally resets its D1 database, replace the old migratio
 
 1. Configure Spotify runtime credentials and complete one account connection.
 2. Add provider-neutral connection and playlist models.
-3. Build the first sync: **Recently Added**.
-4. Store managed playlist IDs and sync history.
-5. Add scheduled refreshes, then the remaining presets.
+3. Add the next managed preset after its algorithm and Spotify data requirements are defined.
+4. Introduce a provider adapter boundary before adding Apple Music.
+5. Improve sync observability and user-facing recovery states.
