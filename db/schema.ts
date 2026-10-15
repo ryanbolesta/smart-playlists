@@ -34,6 +34,7 @@ export const managedPlaylists = sqliteTable(
     lastSyncedAt: text("last_synced_at"),
     syncLeaseExpiresAt: text("sync_lease_expires_at"),
     lastSyncError: text("last_sync_error"),
+    consecutiveFailureCount: integer("consecutive_failure_count").notNull().default(0),
     trackCount: integer("track_count").notNull().default(0),
     createdAt: text("created_at").notNull().default("CURRENT_TIMESTAMP"),
     updatedAt: text("updated_at").notNull().default("CURRENT_TIMESTAMP"),

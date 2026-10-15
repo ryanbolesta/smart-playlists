@@ -14,7 +14,12 @@ export async function POST(request: Request) {
     if (rpc.params?.name !== "sync_recently_liked_playlists" && rpc.params?.name !== "sync_managed_playlists") return Response.json(jsonRpcError(id, -32601, "Unknown tool."), { status: 404 });
     try {
       const [recentlyLiked, lostAndFound] = await Promise.all([syncScheduledRecentlyLiked(request), syncScheduledLostAndFound(request)]);
-      return Response.json(jsonRpcResult(id, { content: [{ type: "text", text: `Managed playlist sync complete: Recently Liked ${recentlyLiked.synced} synced, Lost & Found ${lostAndFound.synced} synced, ${recentlyLiked.failed + lostAndFound.failed} failed.` }] }));
+      const failed = recentlyLiked.failed + lostAndFound.failed;
+      const alerted = recentlyLiked.alerted + lostAndFound.alerted;
+      const suppressed = failed - alerted;
+      const persistentDetails = [...recentlyLiked.alerts, ...lostAndFound.alerts].join(" | ");
+      const text = `Managed playlist sync complete: Recently Liked ${recentlyLiked.synced} synced, Lost & Found ${lostAndFound.synced} synced, ${suppressed} transient failure${suppressed === 1 ? "" : "s"} suppressed, ${alerted} persistent failure${alerted === 1 ? "" : "s"} requiring attention.${persistentDetails ? ` ${persistentDetails}` : ""}`;
+      return Response.json(jsonRpcResult(id, { content: [{ type: "text", text }], ...(alerted > 0 ? { isError: true } : {}) }));
     } catch (error) {
       return Response.json(jsonRpcResult(id, { content: [{ type: "text", text: error instanceof Error ? error.message : "Could not run the scheduled sync." }], isError: true }));
     }

@@ -14,6 +14,7 @@ const SAVED_PAGE_SIZE = 50;
 const PREVIEW_SIZE = 30;
 const PLAYLIST_BATCH_SIZE = 100;
 const SYNC_LEASE_MS = 10 * 60 * 1000;
+const FAILURE_ALERT_THRESHOLD = 3;
 
 type Track = { id?: string; uri?: string; artists?: Array<{ id?: string; name?: string }>; album?: { id?: string; name?: string }; };
 type TopResponse = { items?: Track[] };
@@ -45,16 +46,21 @@ export async function syncLostAndFoundForUser(userId: string, request: Request):
       if (!createdPlaylist.id) throw new Error("Spotify did not return the new playlist.");
       await uploadPlaylistCover(createdPlaylist.id, accessToken);
       const now = new Date().toISOString();
-      playlist = { userId, presetId: PRESET_ID, spotifyPlaylistId: createdPlaylist.id, spotifyPlaylistUrl: createdPlaylist.external_urls?.spotify ?? null, lastSyncedAt: null, syncLeaseExpiresAt: null, lastSyncError: null, trackCount: 0, createdAt: now, updatedAt: now };
+      playlist = { userId, presetId: PRESET_ID, spotifyPlaylistId: createdPlaylist.id, spotifyPlaylistUrl: createdPlaylist.external_urls?.spotify ?? null, lastSyncedAt: null, syncLeaseExpiresAt: null, lastSyncError: null, consecutiveFailureCount: 0, trackCount: 0, createdAt: now, updatedAt: now };
       await db.insert(managedPlaylists).values(playlist);
       created = true;
     }
     await replacePlaylistItems(playlist.spotifyPlaylistId, uris, accessToken);
     const syncedAt = new Date().toISOString();
-    await db.update(managedPlaylists).set({ lastSyncedAt: syncedAt, syncLeaseExpiresAt: null, lastSyncError: null, trackCount: uris.length, updatedAt: syncedAt }).where(and(eq(managedPlaylists.userId, userId), eq(managedPlaylists.presetId, PRESET_ID)));
+    await db.update(managedPlaylists).set({ lastSyncedAt: syncedAt, syncLeaseExpiresAt: null, lastSyncError: null, consecutiveFailureCount: 0, trackCount: uris.length, updatedAt: syncedAt }).where(and(eq(managedPlaylists.userId, userId), eq(managedPlaylists.presetId, PRESET_ID)));
     return { created, trackCount: uris.length, syncedAt, playlistUrl: playlist.spotifyPlaylistUrl };
   } catch (error) {
-    if (playlist) await db.update(managedPlaylists).set({ syncLeaseExpiresAt: null, lastSyncError: error instanceof Error ? error.message : "Could not sync Lost & Found.", updatedAt: new Date().toISOString() }).where(and(eq(managedPlaylists.userId, userId), eq(managedPlaylists.presetId, PRESET_ID)));
+    if (playlist) {
+      const message = error instanceof Error ? error.message : "Could not sync Lost & Found.";
+      const consecutiveFailureCount = (playlist.consecutiveFailureCount ?? 0) + 1;
+      await db.update(managedPlaylists).set({ syncLeaseExpiresAt: null, lastSyncError: message, consecutiveFailureCount, updatedAt: new Date().toISOString() }).where(and(eq(managedPlaylists.userId, userId), eq(managedPlaylists.presetId, PRESET_ID)));
+      throw new SyncFailureError(message, consecutiveFailureCount);
+    }
     throw error;
   }
 }
@@ -66,7 +72,14 @@ export async function syncScheduledLostAndFound(request: Request) {
   const results = await Promise.allSettled(userIds.map((userId) => syncLostAndFoundForUser(userId, request)));
   const synced = results.filter((result) => result.status === "fulfilled").length;
   const skipped = results.filter((result) => result.status === "rejected" && result.reason instanceof SyncInProgressError).length;
-  return { checked: userIds.length, synced, skipped, failed: results.length - synced - skipped };
+  const failed = results.length - synced - skipped;
+  const alerts = results.flatMap((result) => {
+    if (result.status === "rejected" && result.reason instanceof SyncFailureError && result.reason.consecutiveFailureCount >= FAILURE_ALERT_THRESHOLD) {
+      return [`Lost & Found: ${result.reason.message}`];
+    }
+    return [];
+  });
+  return { checked: userIds.length, synced, skipped, failed, alerted: alerts.length, alerts };
 }
 
 async function getLostAndFoundUris(accessToken: string) {
@@ -167,3 +180,4 @@ async function spotifyFetch(url: string, accessToken: string, init?: RequestInit
 function includesLostAndFound(value: string | undefined) { if (!value) return false; try { const selected = JSON.parse(value); return Array.isArray(selected) && selected.includes(PRESET_ID); } catch { return false; } }
 export class SyncInputError extends Error {}
 export class SyncInProgressError extends Error { constructor() { super("A sync is already in progress."); } }
+export class SyncFailureError extends Error { constructor(message: string, public consecutiveFailureCount: number) { super(message); } }
