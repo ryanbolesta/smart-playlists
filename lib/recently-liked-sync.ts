@@ -68,7 +68,7 @@ export async function syncScheduledRecentlyLiked(request: Request) {
   const skipped = results.filter((result) => result.status === "rejected" && result.reason instanceof SyncInProgressError).length;
   const failed = results.length - synced - skipped;
   const alerts = results.flatMap((result) => {
-    if (result.status === "rejected" && result.reason instanceof SyncFailureError && result.reason.consecutiveFailureCount >= FAILURE_ALERT_THRESHOLD) {
+    if (result.status === "rejected" && result.reason instanceof SyncFailureError && result.reason.consecutiveFailureCount === FAILURE_ALERT_THRESHOLD) {
       return [`Recently Liked: ${result.reason.message}`];
     }
     return [];
