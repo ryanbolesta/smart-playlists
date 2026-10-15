@@ -29,6 +29,14 @@ body {
   font-family: Arial, Helvetica, sans-serif;
 }
 
+.metal-background {
+  background-color: #62686c;
+  background-image: linear-gradient(rgba(24, 29, 31, 0.43), rgba(24, 29, 31, 0.43)), url("/brushed-metal-background.jpg");
+  background-position: center;
+  background-size: cover;
+  background-attachment: fixed;
+}
+
 button,
 a {
   -webkit-tap-highlight-color: transparent;
